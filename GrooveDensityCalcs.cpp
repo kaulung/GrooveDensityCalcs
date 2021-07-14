@@ -20,8 +20,33 @@ using namespace std::chrono;
 const double pi = 3.14159265358979323;
 const int F_cam = 320; //This number is in mm 
 const int Pixel_Size = 18; // This number is in micrometers
-ParameterContainter parameters_1(0,0,0,0,0,0,0,0);
 
+//-------------Constant Parameter Ranges-------------------
+//Range for the opening angle
+const int open_angle_min = 36;
+const int open_angle_max = 40;
+
+//Range for the order
+const int order_min = -6;
+const int order_max = 6;
+
+//Range for the incident angle
+const double inc_angle_min = 10;
+const double inc_angle_max = 60;
+
+//Range for the groove density 
+const int groove_density_min = 100;
+const int groove_density_max = 1000;
+
+//Constant for desireable/target Spectral Resolution
+const int target_SpecRes = 50000;
+//---------------------------------------------------------
+
+//Vector to hold the parameter containers of all
+//three central wavelengths
+vector<ParameterContainter> parameters;
+//Creating a variable to temporarily hold parameter values
+ParameterContainter temp_parameters(0,0,0,0,0,0,0,0);
 /*
 -> This function calculates and returns the Angle of Diffraction 
 given these parameters:
@@ -120,21 +145,22 @@ opening_angle = (diff_angle != -1) ? (diff_angle+inc_angle) : -1;
 Spec_Res = calcSpecRes(wavelength, order, groove_density, diff_angle);
 
 if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
-    if(opening_angle > 36 && opening_angle < 41){
+    if(opening_angle > open_angle_min && opening_angle < open_angle_max){
         //Compare the current maximum Spectral Resolution in the variable parameter
-        if(Spec_Res.first > parameters_1.getSpecRes2()){
+        if(Spec_Res.first > temp_parameters.getSpecRes2()){
             //If it is greater, make those parameters the new best parameters
-            parameters_1.setWavelength(wavelength);
-            parameters_1.setOrder(order);
-            parameters_1.setIncAngle(inc_angle);
-            parameters_1.setGrooveDensity(groove_density);
-            parameters_1.setDiffAngle(diff_angle);
-            parameters_1.setOpenAngle(opening_angle);
-            parameters_1.setSpecRes2(Spec_Res.first);
-            parameters_1.setSpecRes3(Spec_Res.second);
+            temp_parameters.setWavelength(wavelength);
+            temp_parameters.setOrder(order);
+            temp_parameters.setIncAngle(inc_angle);
+            temp_parameters.setGrooveDensity(groove_density);
+            temp_parameters.setDiffAngle(diff_angle);
+            temp_parameters.setOpenAngle(opening_angle);
+            temp_parameters.setSpecRes2(Spec_Res.first);
+            temp_parameters.setSpecRes3(Spec_Res.second);
         }
     }
 }
+
 }
 
 
@@ -144,59 +170,91 @@ looped through to find the adaquate parameters for the
 for the Spectral 
 -> Parameters that will be incremented through are:
 * Wavelengths: Will test the upper and lower bounds of 
-    the wavelengths that will fit on the detector
-* Order: (Subject to change) with an increment of 1
-* Incident Angle: [10, 60] with an increment of 0.1
-* Groove Density: [50, 1000] with an increment of 1
+    the wavelengths that will fit on the detector with an increment of 0.001
+* Order: Specified range with an increment of 1
+* Incident Angle: Specified range with an increment of 0.1
+* Groove Density: specified range with an increment of 1
 */
 void runTestingParameters(double centralWavelength){
 
-    int Order_arr [12] = {-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6};
-    int Order_arr_size = sizeof(Order_arr)/sizeof(Order_arr[0]);
-    int groove_density;
-    double inc_angle, lowerWavelength, upperWavelength;
+    int test_order, test_groove_density;
+    double test_wavelength, test_inc_angle;
+    double lowerWavelength, upperWavelength;
 
     //The 50,000 number comes from the desired spectral resolution
     //The decimal accuracy goes to 5 decimal places (0.00001)
-    lowerWavelength =  centralWavelength - ((centralWavelength*1024)/(50000));
-    upperWavelength = centralWavelength + ((centralWavelength*1024)/(50000)); 
+    lowerWavelength =  centralWavelength - ((centralWavelength*1024)/(target_SpecRes));
+    upperWavelength = centralWavelength + ((centralWavelength*1024)/(target_SpecRes)); 
     //cout << lowerWavelength << endl;
     //cout << upperWavelength << endl;
 
     //Iterate through all possible wavlengths starting with the lower and upper bounds of the central wavelength 
-    for(lowerWavelength += 0; lowerWavelength < upperWavelength; lowerWavelength += 0.001){
+    for(test_wavelength = lowerWavelength; test_wavelength < upperWavelength; test_wavelength += 0.001){
+
         //Iterate through all of the orders to be tested 
-        for(int i = 0; i < Order_arr_size; i++){
+        for(test_order = order_min; test_order < order_max; test_order++){
+            //Don't test the 0th order
+            if(test_order != 0){
+
             //Iterate through all possible angles to be tested
-            for(inc_angle = 10; inc_angle < 60; inc_angle += 0.1){
+            for(test_inc_angle = inc_angle_min; test_inc_angle < inc_angle_max; test_inc_angle += 0.1){
+
                 //Iterate through all possible goove densities to be tested
-                for(groove_density = 50; groove_density < 1000; groove_density += 1){
-                    findViableParameters(lowerWavelength, Order_arr[i], inc_angle, groove_density);
-           }
-       }
-    }
+                for(test_groove_density = groove_density_min; test_groove_density < groove_density_max; test_groove_density += 1){
+                    findViableParameters(test_wavelength, test_order, test_inc_angle, test_groove_density);
+                }
+            }
+            }
+        }
     }
 
+    //Transfer the parameters to the newly created Parameter Container
+    ParameterContainter tested_parameters(temp_parameters);
+
+    //Clear the parameters in the Temp Parameters variable
+    temp_parameters.clearParameters();
+
+    //Push the final tested parameters to the vector
+    parameters.push_back(tested_parameters);
 }
 
 
 int main(int argc, char** argv){
 
+
+
 //Creating a starting time point
 auto inital = high_resolution_clock::now();
 
+//Testing the parameters for the central 
+//wavelength of 2.16 µm
 runTestingParameters(2.16);
+
+//Testing the parameters for the central 
+//wavelength of 3.1 µm
+runTestingParameters(3.1);
+
+//Testing the parameters for the central 
+//wavelength of 4.7 µm
+runTestingParameters(4.7)
 
 //Creating a ending time point
 auto final = high_resolution_clock::now();
 
-parameters_1.print_parameters();
+if(!parameters.empty()){
+    for(int i = 0; i < parameters.size(); i++){
+        parameters[i].print_parameters();
+    }
+}
+
 
 //Getting total duration of the function in miliseconds
 auto duration = duration_cast<seconds>(final - inital);
 
 //Printing the results 
 cout << "Time Elapsed: " << duration.count() << " seconds" << endl;
+
+
 
 return 0;
 }

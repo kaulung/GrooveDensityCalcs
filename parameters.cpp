@@ -8,13 +8,27 @@ class ParameterContainter{
     double diff_angle, open_angle, SpecRes2, SpecRes3;
 
     public: 
-
-    ParameterContainter(double w, int o, double i, int g,
-    double diff_angle, double open_angle, double SpecRes2, double SpecRes3){
-        wavelength = w;
+    ParameterContainter(double wave, int o, double i_angle, int g_density,
+    double d_angle, double o_angle, double SRes2, double SRes3){
+        wavelength = wave;
         order = o;
-        inc_angle = i;
-        groove_density = g;
+        inc_angle = i_angle;
+        groove_density = g_density;
+        diff_angle = d_angle;
+        open_angle = o_angle;
+        SpecRes2 = SRes2;
+        SpecRes3 = SRes3;
+    }
+
+    ParameterContainter(const ParameterContainter &p1){
+        wavelength = p1.wavelength;
+        order = p1.order;
+        inc_angle = p1.inc_angle;
+        groove_density = p1.groove_density;
+        diff_angle = p1.diff_angle;
+        open_angle = p1.open_angle;
+        SpecRes2 = p1.SpecRes2;
+        SpecRes3 = p1.SpecRes3;
     }
 
     void print_parameters(){
@@ -29,6 +43,18 @@ class ParameterContainter{
             cout << "Spectral Resolution (2pixels): " << SpecRes2 << endl;
             cout << "Spectral Resolution (3pixels): " << SpecRes3 << endl;
             cout << "----------------------------------------" << endl;
+    }
+
+    //Makes all the parameter values back to 0
+    void clearParameters(){
+        wavelength = 0;
+        order = 0;
+        inc_angle = 0;
+        groove_density = 0;
+        diff_angle = 0;
+        open_angle = 0;
+        SpecRes2 = 0;
+        SpecRes3 = 0;
     }
 
     void setWavelength(double input){
