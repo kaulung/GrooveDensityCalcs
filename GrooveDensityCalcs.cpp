@@ -1,16 +1,16 @@
 /*
 AUTHOR: Ka'ulu Ng
 DATE:7/13/2021
-PURPOSE: To calcualte the groove density for the gratings 
+PURPOSE: To calculate the groove density for the gratings 
 that will give a maximum spectral resolution. 
 * The central wavelengths are 2.16, 3.1, and 4.7 µm
 */
-
 
 #include <iostream>
 #include <cmath>
 #include <list>
 #include <execution>
+#include <chrono>
 #include "parameters.cpp"
 
 using namespace std;
@@ -132,56 +132,54 @@ if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
         }
     }
 }
-
 }
 
 
 /*
--> This is the main function, it will be used to state the lists
-that will be looped through to find the adaquate parameters 
+-> This is the runTestingParameters function, it will be 
+looped through to find the adaquate parameters for the 
 for the Spectral 
 -> Parameters that will be incremented through are:
-* Wavelengths: will test
-* Order: [-4, 4] with an increment of 1
-* Incident Angle: [20, 70] with an increment of 0.1
+* Wavelengths: Will test the upper and lower bounds of 
+    the wavelengths that will fit on the detector
+* Order: (Subject to change) with an increment of 1
+* Incident Angle: [10, 60] with an increment of 0.1
 * Groove Density: [50, 1000] with an increment of 1
 */
+void runTestingParameters(double centralWavelength){
+
+    int Order_arr [10] = {-5, -4, -3, -2, -1, 1, 2, 3, 4, 5};
+    int Order_arr_size = sizeof(Order_arr)/sizeof(Order_arr[0]);
+    int groove_density;
+    double inc_angle, lowerWavelength, upperWavelength;
+
+    //The 50,000 number comes from the desired spectral resolution
+    //The decimal accuracy goes to 5 decimal places (0.00001)
+    lowerWavelength =  centralWavelength - ((centralWavelength*1024)/(50000));
+    upperWavelength = centralWavelength + ((centralWavelength*1024)/(50000)); 
+    //cout << lowerWavelength << endl;
+    //cout << upperWavelength << endl;
+
+    //Iterate through all possible wavlengths starting with the lower and upper bounds of the central wavelength 
+    for(lowerWavelength += 0; lowerWavelength < upperWavelength; lowerWavelength += 0.001){
+        //Iterate through all of the orders to be tested 
+        for(int i = 0; i < Order_arr_size; i++){
+            //Iterate through all possible angles to be tested
+            for(inc_angle = 10; inc_angle < 60; inc_angle += 0.1){
+                //Iterate through all possible goove densities to be tested
+                for(groove_density = 50; groove_density < 1000; groove_density += 1){
+                    findViableParameters(lowerWavelength, Order_arr[i], inc_angle, groove_density);
+           }
+       }
+    }
+    }
+
+}
+
+
 int main(int argc, char** argv){
 
-int Order_arr [10] = {-5, -4, -3, -2, -1, 1, 2, 3, 4, 5};
-int Order_arr_size = sizeof(Order_arr)/sizeof(Order_arr[0]);
-double wavelength, inc_angle;
-int groove_density;
-
-//Iterate through all possible wavlengths starting with 2.16 being the central wavelength
-for(wavelength = 2.1157632; wavelength < 2.2042368; wavelength += 0.001){
-    //Iterate through all of the orders starting with the 0th index
-    for(int i = 0; i < Order_arr_size; i++){
-        //Iterate through all possible angles starting with 30
-       for(inc_angle = 10; inc_angle < 80; inc_angle += 0.1){
-           //Iterate through all possible goove densities starting with 30
-           for(groove_density = 50; groove_density < 10000; groove_density += 1){
-               findViableParameters(wavelength, Order_arr[i], inc_angle, groove_density);
-           }
-       }
-    }
-}
-
-/*
-//Iterate through all possible wavlengths starting with 2.16 being the central wavelength
-for(wavelength = 2.115998; wavelength < 2.204032; wavelength += 0.001){
-    //Iterate through all of the orders starting with the 0th index
-    for(int i = 0; i < Order_arr_size; i++){
-        //Iterate through all possible angles starting with 30
-       for(inc_angle = 10; inc_angle < 80; inc_angle += 0.1){
-           //Iterate through all possible goove densities starting with 30
-           for(groove_density = 50; groove_density < 10000; groove_density += 1){
-               findViableParameters(wavelength, Order_arr[i], inc_angle, groove_density);
-           }
-       }
-    }
-}
-*/
+runTestingParameters(2.16);
 
 parameters_1.print_parameters();
 
