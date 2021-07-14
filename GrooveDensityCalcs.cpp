@@ -11,9 +11,12 @@ that will give a maximum spectral resolution.
 #include <list>
 #include <execution>
 #include <chrono>
+#include <algorithm>
+#include <vector>
 #include "parameters.cpp"
 
 using namespace std;
+using namespace std::chrono;
 const double pi = 3.14159265358979323;
 const int F_cam = 320; //This number is in mm 
 const int Pixel_Size = 18; // This number is in micrometers
@@ -117,7 +120,7 @@ opening_angle = (diff_angle != -1) ? (diff_angle+inc_angle) : -1;
 Spec_Res = calcSpecRes(wavelength, order, groove_density, diff_angle);
 
 if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
-    if(opening_angle > 35 && opening_angle < 42){
+    if(opening_angle > 36 && opening_angle < 41){
         //Compare the current maximum Spectral Resolution in the variable parameter
         if(Spec_Res.first > parameters_1.getSpecRes2()){
             //If it is greater, make those parameters the new best parameters
@@ -148,7 +151,7 @@ for the Spectral
 */
 void runTestingParameters(double centralWavelength){
 
-    int Order_arr [10] = {-5, -4, -3, -2, -1, 1, 2, 3, 4, 5};
+    int Order_arr [12] = {-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6};
     int Order_arr_size = sizeof(Order_arr)/sizeof(Order_arr[0]);
     int groove_density;
     double inc_angle, lowerWavelength, upperWavelength;
@@ -179,9 +182,21 @@ void runTestingParameters(double centralWavelength){
 
 int main(int argc, char** argv){
 
+//Creating a starting time point
+auto inital = high_resolution_clock::now();
+
 runTestingParameters(2.16);
 
+//Creating a ending time point
+auto final = high_resolution_clock::now();
+
 parameters_1.print_parameters();
+
+//Getting total duration of the function in miliseconds
+auto duration = duration_cast<seconds>(final - inital);
+
+//Printing the results 
+cout << "Time Elapsed: " << duration.count() << " seconds" << endl;
 
 return 0;
 }
