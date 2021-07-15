@@ -13,6 +13,7 @@ that will give a maximum spectral resolution.
 #include <chrono>
 #include <algorithm>
 #include <vector>
+#include <ctime>
 #include "parameters.cpp"
 
 using namespace std;
@@ -221,8 +222,6 @@ void runTestingParameters(double centralWavelength){
 
 int main(int argc, char** argv){
 
-
-
 //Creating a starting time point
 auto inital = high_resolution_clock::now();
 
@@ -236,25 +235,23 @@ runTestingParameters(3.1);
 
 //Testing the parameters for the central 
 //wavelength of 4.7 µm
-runTestingParameters(4.7)
+runTestingParameters(4.7);
 
 //Creating a ending time point
 auto final = high_resolution_clock::now();
 
+//Printing the results of all runs
 if(!parameters.empty()){
     for(int i = 0; i < parameters.size(); i++){
         parameters[i].print_parameters();
     }
 }
 
-
-//Getting total duration of the function in miliseconds
+//Getting total duration of the function in seconds
 auto duration = duration_cast<seconds>(final - inital);
 
 //Printing the results 
 cout << "Time Elapsed: " << duration.count() << " seconds" << endl;
-
-
 
 return 0;
 }
