@@ -24,19 +24,20 @@ const int Pixel_Size = 18; // This number is in micrometers
 
 //-------------Constant Parameter Ranges-------------------
 //Range for the opening angle
-const int open_angle_min = 36;
-const int open_angle_max = 40;
+const double open_angle_min = 37.5;
+const double open_angle_max = 38.5;
+//Change this to 38 degrees only 
 
 //Range for the order
-const int order_min = -6;
-const int order_max = 6;
+const int order_min = -7;
+const int order_max = 7;
 
 //Range for the incident angle
-const double inc_angle_min = 10;
+const double inc_angle_min = 25;
 const double inc_angle_max = 60;
 
 //Range for the groove density 
-const int groove_density_min = 100;
+const int groove_density_min = 50;
 const int groove_density_max = 1000;
 
 //Constant for desireable/target Spectral Resolution
@@ -47,7 +48,7 @@ const int target_SpecRes = 50000;
 //three central wavelengths
 vector<ParameterContainter> parameters;
 //Creating a variable to temporarily hold parameter values
-ParameterContainter temp_parameters(0,0,0,0,0,0,0,0);
+ParameterContainter temp_parameters(0,0,0,0,0,0,0,0,0);
 /*
 -> This function calculates and returns the Angle of Diffraction 
 given these parameters:
@@ -74,7 +75,6 @@ double calcDifFAngle(double wavelength, int order, double inc_angle, int groove_
         result = asin(temp)*(180/pi);
         return result;
     }
-
 }
 
 /*
@@ -132,7 +132,7 @@ opening angle and the spectral resolution values:
 void findViableParameters(double wavelength, int order, double inc_angle, int groove_density){
 
 pair<double, double> Spec_Res;
-double opening_angle, diff_angle;
+double opening_angle, diff_angle, blaze_angle;
 
 //Calculating the Angle of Diffraction 
 diff_angle = calcDifFAngle(wavelength, order, inc_angle, groove_density);
@@ -140,15 +140,22 @@ diff_angle = calcDifFAngle(wavelength, order, inc_angle, groove_density);
 //Calculating the Opening Angle or forcing a -1 for control flow later
 opening_angle = (diff_angle != -1) ? (diff_angle+inc_angle) : -1;
 
+//Calculating the Blaze Angle or forcing a -1 for control flow later
+blaze_angle = (opening_angle != -1) ? (opening_angle/2) : -1;
+
 //Calculating the Spectral Resolution of 2 and 3 pixels
 //The first attribute is the 2 pixel one 
 //The second attribute is the 3 pixel one
 Spec_Res = calcSpecRes(wavelength, order, groove_density, diff_angle);
 
 if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
+
     if(opening_angle > open_angle_min && opening_angle < open_angle_max){
-        //Compare the current maximum Spectral Resolution in the variable parameter
-        if(Spec_Res.first > temp_parameters.getSpecRes2()){
+
+        //Compare the current maximum Spectral Resolution for 2 pixels
+        //in the temporary parameters variable
+        if(Spec_Res.first >= temp_parameters.getSpecRes2()){
+
             //If it is greater, make those parameters the new best parameters
             temp_parameters.setWavelength(wavelength);
             temp_parameters.setOrder(order);
@@ -156,6 +163,7 @@ if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
             temp_parameters.setGrooveDensity(groove_density);
             temp_parameters.setDiffAngle(diff_angle);
             temp_parameters.setOpenAngle(opening_angle);
+            temp_parameters.setBlazeAngle(blaze_angle);
             temp_parameters.setSpecRes2(Spec_Res.first);
             temp_parameters.setSpecRes3(Spec_Res.second);
         }
@@ -190,30 +198,34 @@ void runTestingParameters(double centralWavelength){
     //cout << upperWavelength << endl;
 
     //Iterate through all possible wavlengths starting with the lower and upper bounds of the central wavelength 
-    for(test_wavelength = lowerWavelength; test_wavelength < upperWavelength; test_wavelength += 0.001){
+    //for(test_wavelength = lowerWavelength; test_wavelength < upperWavelength; test_wavelength += 0.001){
 
         //Iterate through all of the orders to be tested 
         for(test_order = order_min; test_order < order_max; test_order++){
             //Don't test the 0th order
             if(test_order != 0){
 
-            //Iterate through all possible angles to be tested
-            for(test_inc_angle = inc_angle_min; test_inc_angle < inc_angle_max; test_inc_angle += 0.1){
+                //Iterate through all possible angles to be tested
+                for(test_inc_angle = inc_angle_min; test_inc_angle < inc_angle_max; test_inc_angle += 0.01){
 
-                //Iterate through all possible goove densities to be tested
-                for(test_groove_density = groove_density_min; test_groove_density < groove_density_max; test_groove_density += 1){
-                    findViableParameters(test_wavelength, test_order, test_inc_angle, test_groove_density);
+                    //Iterate through all possible goove densities to be tested
+                    for(test_groove_density = groove_density_min; test_groove_density < groove_density_max; test_groove_density += 1){
+                        findViableParameters(centralWavelength, test_order, test_inc_angle, test_groove_density);
+                    }
                 }
             }
-            }
         }
-    }
+    //}
 
     //Transfer the parameters to the newly created Parameter Container
     ParameterContainter tested_parameters(temp_parameters);
 
+    //temp_parameters.print_parameters();
+
     //Clear the parameters in the Temp Parameters variable
     temp_parameters.clearParameters();
+
+    //temp_parameters.print_parameters();
 
     //Push the final tested parameters to the vector
     parameters.push_back(tested_parameters);
@@ -221,6 +233,11 @@ void runTestingParameters(double centralWavelength){
 
 
 int main(int argc, char** argv){
+
+
+string answer;
+
+cout << "Testing Mode [yes/no]? Input [y/n]:"
 
 //Creating a starting time point
 auto inital = high_resolution_clock::now();
