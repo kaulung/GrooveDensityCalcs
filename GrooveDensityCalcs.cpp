@@ -21,34 +21,42 @@ using namespace std::chrono;
 const double pi = 3.14159265358979323;
 const int F_cam = 320; //This number is in mm 
 const int Pixel_Size = 18; // This number is in micrometers
+//Constant for total amount of pixels
+const int tot_pixel_length = 2048;
 
 //-------------Constant Parameter Ranges-------------------
-//Range for the opening angle
-const double open_angle_min = 37.5;
-const double open_angle_max = 38.5;
+//Range for the opening angle in degrees
+const double open_angle_min = 37.8;
+const double open_angle_max = 38.2;
 //Change this to 38 degrees only 
 
 //Range for the order
 const int order_min = -7;
 const int order_max = 7;
 
-//Range for the incident angle
-const double inc_angle_min = 25;
-const double inc_angle_max = 60;
+//Range for the incident angle in degrees
+const double inc_angle_min = 20;
+const double inc_angle_max = 75;
 
-//Range for the groove density 
+//Range for the groove density in degrees
 const int groove_density_min = 50;
 const int groove_density_max = 1000;
 
 //Constant for desireable/target Spectral Resolution
 const int target_SpecRes = 50000;
+
+//Constant for minimum Spectral Resolution that will be allowed
+const int min_target_SpecRes = 10000;
 //---------------------------------------------------------
+
 
 //Vector to hold the parameter containers of all
 //three central wavelengths
 vector<ParameterContainter> parameters;
 //Creating a variable to temporarily hold parameter values
-ParameterContainter temp_parameters(0,0,0,0,0,0,0,0,0);
+ParameterContainter temp_parameters(0,0,0,0,0,0,0,0,0,0,0);
+
+
 /*
 -> This function calculates and returns the Angle of Diffraction 
 given these parameters:
@@ -96,9 +104,6 @@ pair<double, double> calcSpecRes(double wavelength, int order, int groove_densit
     top_denom = wavelength*order*F_cam*groove_density;
     bot_denom2 = Pixel_Size*2*cos(diff_angle*(pi/180));
     bot_denom3 = Pixel_Size*3*cos(diff_angle*(pi/180));
-    //cout << top_denom << endl;
-    //cout << bot_denom2 << endl;
-    //cout << bot_denom3 << endl;
 
     if(bot_denom2 > 0){
         result2 = top_denom/bot_denom2;
@@ -133,6 +138,14 @@ void findViableParameters(double wavelength, int order, double inc_angle, int gr
 
 pair<double, double> Spec_Res;
 double opening_angle, diff_angle, blaze_angle;
+double lowerWavelength, upperWavelength;
+
+//The 50,000 number comes from the desired spectral resolution
+//The decimal accuracy goes to 5 decimal places (0.00001)
+lowerWavelength =  wavelength - (wavelength*(tot_pixel_length/2)/(target_SpecRes));
+upperWavelength = wavelength + (wavelength*(tot_pixel_length/2)/(target_SpecRes));
+//cout << lowerWavelength << endl;
+//cout << upperWavelength << endl;
 
 //Calculating the Angle of Diffraction 
 diff_angle = calcDifFAngle(wavelength, order, inc_angle, groove_density);
@@ -141,7 +154,7 @@ diff_angle = calcDifFAngle(wavelength, order, inc_angle, groove_density);
 opening_angle = (diff_angle != -1) ? (diff_angle+inc_angle) : -1;
 
 //Calculating the Blaze Angle or forcing a -1 for control flow later
-blaze_angle = (opening_angle != -1) ? (opening_angle/2) : -1;
+blaze_angle = (diff_angle != -1) ? ((inc_angle-diff_angle)/2) : -1;
 
 //Calculating the Spectral Resolution of 2 and 3 pixels
 //The first attribute is the 2 pixel one 
@@ -154,7 +167,7 @@ if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
 
         //Compare the current maximum Spectral Resolution for 2 pixels
         //in the temporary parameters variable
-        if(Spec_Res.first >= temp_parameters.getSpecRes2()){
+        if(Spec_Res.first >= min_target_SpecRes){
 
             //If it is greater, make those parameters the new best parameters
             temp_parameters.setWavelength(wavelength);
@@ -164,9 +177,25 @@ if(opening_angle != -1 && Spec_Res.first != -1 && Spec_Res.second != -1){
             temp_parameters.setDiffAngle(diff_angle);
             temp_parameters.setOpenAngle(opening_angle);
             temp_parameters.setBlazeAngle(blaze_angle);
+            temp_parameters.setSpecRangeMin(lowerWavelength);
+            temp_parameters.setSpecRangeMax(upperWavelength);
             temp_parameters.setSpecRes2(Spec_Res.first);
             temp_parameters.setSpecRes3(Spec_Res.second);
+
+            //Transfer the parameters to the newly created Parameter Container
+        ParameterContainter tested_parameters(temp_parameters);
+
+        //temp_parameters.print_parameters();
+
+        //Clear the parameters in the Temp Parameters variable
+        temp_parameters.clearParameters();
+
+        //temp_parameters.print_parameters();
+
+        //Push the final tested parameters to the vector
+        parameters.push_back(tested_parameters);
         }
+        
     }
 }
 
@@ -179,23 +208,18 @@ looped through to find the adaquate parameters for the
 for the Spectral 
 -> Parameters that will be incremented through are:
 * Wavelengths: Will test the upper and lower bounds of 
-    the wavelengths that will fit on the detector with an increment of 0.001
+the wavelengths that will fit on the detector with an increment of 0.001.
+The units are µm or micrometers
 * Order: Specified range with an increment of 1
 * Incident Angle: Specified range with an increment of 0.1
+The units are degrees 
 * Groove Density: specified range with an increment of 1
+the units are lines/mm
 */
 void runTestingParameters(double centralWavelength){
 
     int test_order, test_groove_density;
     double test_wavelength, test_inc_angle;
-    double lowerWavelength, upperWavelength;
-
-    //The 50,000 number comes from the desired spectral resolution
-    //The decimal accuracy goes to 5 decimal places (0.00001)
-    lowerWavelength =  centralWavelength - ((centralWavelength*1024)/(target_SpecRes));
-    upperWavelength = centralWavelength + ((centralWavelength*1024)/(target_SpecRes)); 
-    //cout << lowerWavelength << endl;
-    //cout << upperWavelength << endl;
 
     //Iterate through all possible wavlengths starting with the lower and upper bounds of the central wavelength 
     //for(test_wavelength = lowerWavelength; test_wavelength < upperWavelength; test_wavelength += 0.001){
@@ -216,28 +240,71 @@ void runTestingParameters(double centralWavelength){
             }
         }
     //}
-
-    //Transfer the parameters to the newly created Parameter Container
-    ParameterContainter tested_parameters(temp_parameters);
-
-    //temp_parameters.print_parameters();
-
-    //Clear the parameters in the Temp Parameters variable
-    temp_parameters.clearParameters();
-
-    //temp_parameters.print_parameters();
-
-    //Push the final tested parameters to the vector
-    parameters.push_back(tested_parameters);
 }
 
 
+/*
+-> This is the findAboveAverageParams function, it 
+iterate to find the parameters that calculate 
+the top (final_data_set) highest spectral resolution values 
+-> The various ParameterContainer objects in 
+the parameter vector will be iterated through 
+to find these top 5 ParameterContainer objects
+*/
+void findAboveAverageParams(){
+
+    double SpecAve;
+    //This variable will state the maximum of 
+    //how many sets of parameters will be in the print out
+    int final_data_set = 10;
+    
+    //cout << "Inital Size: " << parameters.size() << endl;
+
+    //cout << "After Angle Cutoff: " << parameters.size() << endl;
+
+    //Looping through the vector to find out which 
+    //parameter containters to delete depending on 
+    //duplicate groove density values
+    for(int i = 0; i < parameters.size(); i++){
+        for(int j = parameters.size()-1; j > i; j--){
+            //Comparing the ith paramter container to the jth one
+            if(parameters[i].getGrooveDensity() == parameters[j].getGrooveDensity()){
+                parameters.erase(parameters.begin()+j);
+            }
+        }
+    }
+    
+    //cout << "After Duplicate Check: " << parameters.size() << endl;
+    
+    while(parameters.size() > final_data_set){
+    //Calculate the average spectral resolution
+    //of all of the ParameterContainer objects
+    for(int i = 0; i < parameters.size(); i++){
+        SpecAve += parameters[i].getSpecRes2();
+    }
+    SpecAve = SpecAve/parameters.size();
+    
+    //Find ParameterContainers that above the average
+    for(int i = 0; i < parameters.size(); i++){
+        if(parameters[i].getSpecRes2() < SpecAve){
+            parameters.erase(parameters.begin()+i);
+        }
+    }
+    //cout << "After Average Check: " << parameters.size() << endl;
+    //cout << "SpecAve: " << SpecAve << endl;
+    SpecAve = 0;
+    }
+}
+
+/*
+-> This is the main function for the start
+of the program 
+*/
 int main(int argc, char** argv){
 
+//string answer;
 
-string answer;
-
-cout << "Testing Mode [yes/no]? Input [y/n]:"
+//cout << "Testing Mode [yes/no]? Input [y/n]: << endl;"
 
 //Creating a starting time point
 auto inital = high_resolution_clock::now();
@@ -248,21 +315,30 @@ runTestingParameters(2.16);
 
 //Testing the parameters for the central 
 //wavelength of 3.1 µm
-runTestingParameters(3.1);
+//runTestingParameters(3.1);
 
 //Testing the parameters for the central 
 //wavelength of 4.7 µm
-runTestingParameters(4.7);
+//runTestingParameters(4.7);
 
 //Creating a ending time point
 auto final = high_resolution_clock::now();
 
-//Printing the results of all runs
 if(!parameters.empty()){
+
+    //Finding the sets of parameters that create
+    //the top 5 highest spectral resolution values
+    findAboveAverageParams();
+
+    //Printing the results of all runs
     for(int i = 0; i < parameters.size(); i++){
         parameters[i].print_parameters();
     }
 }
+else{
+    cout << "No parameter set was found" << endl;
+}
+parameters.clear();
 
 //Getting total duration of the function in seconds
 auto duration = duration_cast<seconds>(final - inital);
