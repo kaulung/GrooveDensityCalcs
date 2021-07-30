@@ -26,7 +26,7 @@ class ParameterContainter{
         SpecRes3 = SRes3;
     }
 
-    //Copy Constructor
+    //Copy Constructor for the ParameterContainer
     ParameterContainter(const ParameterContainter &p1){
         wavelength = p1.wavelength;
         order = p1.order;
@@ -73,6 +73,8 @@ class ParameterContainter{
         SpecRes3 = 0;
     }
 
+    //Methods able to set the variables of the 
+    //referenced ParameterContainer object
     void setWavelength(double input){
         wavelength = input;
     }
@@ -117,6 +119,9 @@ class ParameterContainter{
         SpecRes3 = input;
     }
 
+
+    //Methods able to get the variables of the 
+    //referenced ParameterContainer object
     double getWavelength(){
         return wavelength; 
     }
