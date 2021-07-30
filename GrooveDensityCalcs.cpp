@@ -267,7 +267,7 @@ void findAboveAverageParams(){
     double SpecAve;
     //This variable will state the maximum of 
     //how many sets of parameters will be in the print out
-    int final_data_set = 15;
+    int final_data_set = 10;
 
     //Looping through the vector to find out which 
     //parameter containters to delete depending on 
